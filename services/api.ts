@@ -3,6 +3,26 @@ import { InventoryItem, Rental, Client, Kit, Expense, CompanySettings, Revenue }
 import { db } from './firebase';
 import { collection, getDocs, Timestamp, addDoc, doc, updateDoc, deleteDoc, getDoc, query, where, setDoc } from 'firebase/firestore';
 
+// --- Local Storage Fallback ---
+
+const getFromLocalStorage = <T>(key: string, defaultValue: T): T => {
+    try {
+        const item = window.localStorage.getItem(key);
+        return item ? JSON.parse(item) : defaultValue;
+    } catch (error) {
+        console.warn(`Error reading from localStorage key “${key}”:`, error);
+        return defaultValue;
+    }
+};
+
+const setToLocalStorage = <T>(key: string, value: T) => {
+    try {
+        window.localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+        console.error(`Error setting localStorage key “${key}”:`, error);
+    }
+};
+
 // Helper to convert Firestore Timestamp to ISO Date string (YYYY-MM-DD)
 const timestampToIsoDate = (timestamp: any): string => {
     if (timestamp && typeof timestamp.toDate === 'function') {
@@ -42,29 +62,77 @@ const convertDocToClient = (doc: any): Client => ({
 
 // Inventory Management
 export const getInventory = async (): Promise<InventoryItem[]> => {
-    if (!db) return [];
+    if (!db) return getFromLocalStorage<InventoryItem[]>('inventory', []);
     const snapshot = await getDocs(collection(db, 'inventory'));
     return snapshot.docs.map(convertDocToInventoryItem);
 };
-export const addInventoryItem = (item: Omit<InventoryItem, 'id'>) => db && addDoc(collection(db, 'inventory'), item);
-export const updateInventoryItem = (id: string, data: Partial<InventoryItem>) => db && updateDoc(doc(db, 'inventory', id), data);
-export const deleteInventoryItem = (id: string) => db && deleteDoc(doc(db, 'inventory', id));
+export const addInventoryItem = (item: Omit<InventoryItem, 'id'>) => {
+    if (!db) {
+        const items = getFromLocalStorage<InventoryItem[]>('inventory', []);
+        const newItem = { ...item, id: `local_${Date.now()}` };
+        setToLocalStorage('inventory', [...items, newItem]);
+        return Promise.resolve();
+    }
+    return addDoc(collection(db, 'inventory'), item);
+};
+export const updateInventoryItem = (id: string, data: Partial<InventoryItem>) => {
+    if (!db) {
+        const items = getFromLocalStorage<InventoryItem[]>('inventory', []);
+        const updatedItems = items.map(item => item.id === id ? { ...item, ...data } : item);
+        setToLocalStorage('inventory', updatedItems);
+        return Promise.resolve();
+    }
+    return updateDoc(doc(db, 'inventory', id), data);
+};
+export const deleteInventoryItem = (id: string) => {
+    if (!db) {
+        const items = getFromLocalStorage<InventoryItem[]>('inventory', []);
+        setToLocalStorage('inventory', items.filter(item => item.id !== id));
+        return Promise.resolve();
+    }
+    return deleteDoc(doc(db, 'inventory', id));
+};
 
 // Client Management
 export const getClients = async (): Promise<Client[]> => {
-    if (!db) return [];
+    if (!db) return getFromLocalStorage<Client[]>('clients', []);
     const snapshot = await getDocs(collection(db, 'clients'));
     return snapshot.docs.map(convertDocToClient);
 };
 export const addClient = async (client: Omit<Client, 'id'>): Promise<Client> => {
-    if (!db) throw new Error("Database not initialized");
+    if (!db) {
+        const clients = getFromLocalStorage<Client[]>('clients', []);
+        const newClient = { ...client, id: `local_${Date.now()}` };
+        setToLocalStorage('clients', [...clients, newClient]);
+        return Promise.resolve(newClient);
+    }
     const docRef = await addDoc(collection(db, 'clients'), client);
     return { ...client, id: docRef.id };
 };
-export const updateClient = (id: string, data: Partial<Client>) => db && updateDoc(doc(db, 'clients', id), data);
+export const updateClient = (id: string, data: Partial<Client>) => {
+    if (!db) {
+        const clients = getFromLocalStorage<Client[]>('clients', []);
+        const updatedClients = clients.map(client => client.id === id ? { ...client, ...data } : client);
+        setToLocalStorage('clients', updatedClients);
+        return Promise.resolve();
+    }
+    return updateDoc(doc(db, 'clients', id), data);
+};
 
 export const findOrCreateClient = async (clientData: { name: string; phone: string; email: string }): Promise<Client> => {
-    if (!db) throw new Error("Database not initialized");
+    if (!db) {
+        const clients = getFromLocalStorage<Client[]>('clients', []);
+        const existingClient = clients.find(c => c.phone === clientData.phone);
+        if (existingClient) {
+            return existingClient;
+        }
+        const newClientData: Omit<Client, 'id'> = {
+            ...clientData,
+            type: 'pf',
+            address: { cep: '', street: '', number: '', neighborhood: '', city: '', state: '' }
+        };
+        return addClient(newClientData);
+    }
     const q = query(collection(db, "clients"), where("phone", "==", clientData.phone));
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
@@ -82,23 +150,49 @@ export const findOrCreateClient = async (clientData: { name: string; phone: stri
 
 // Kit Management
 export const getKits = async (): Promise<Kit[]> => {
-    if (!db) return [];
+    if (!db) return getFromLocalStorage<Kit[]>('kits', []);
     const snapshot = await getDocs(collection(db, 'kits'));
     return snapshot.docs.map(doc => ({ ...doc.data() as Omit<Kit, 'id'>, id: doc.id }));
 };
-export const addKit = (kit: Omit<Kit, 'id'>) => db && addDoc(collection(db, 'kits'), kit);
-export const updateKit = (id: string, data: Partial<Kit>) => db && updateDoc(doc(db, 'kits', id), data);
-export const deleteKit = (id: string) => db && deleteDoc(doc(db, 'kits', id));
+export const addKit = (kit: Omit<Kit, 'id'>) => {
+    if (!db) {
+        const kits = getFromLocalStorage<Kit[]>('kits', []);
+        const newKit = { ...kit, id: `local_${Date.now()}` };
+        setToLocalStorage('kits', [...kits, newKit]);
+        return Promise.resolve();
+    }
+    return addDoc(collection(db, 'kits'), kit);
+};
+export const updateKit = (id: string, data: Partial<Kit>) => {
+    if (!db) {
+        const kits = getFromLocalStorage<Kit[]>('kits', []);
+        const updatedKits = kits.map(k => k.id === id ? { ...k, ...data } : k);
+        setToLocalStorage('kits', updatedKits);
+        return Promise.resolve();
+    }
+    return updateDoc(doc(db, 'kits', id), data);
+};
+export const deleteKit = (id: string) => {
+    if (!db) {
+        const kits = getFromLocalStorage<Kit[]>('kits', []);
+        setToLocalStorage('kits', kits.filter(k => k.id !== id));
+        return Promise.resolve();
+    }
+    return deleteDoc(doc(db, 'kits', id));
+};
 
 // Rental Management
 export const getRentals = async (): Promise<Rental[]> => {
-    if (!db) return [];
+    if (!db) return getFromLocalStorage<Rental[]>('rentals', []);
     const snapshot = await getDocs(collection(db, 'rentals'));
     return snapshot.docs.map(convertDocToRental);
 };
 
 export const getRentalById = async (id: string): Promise<Rental | null> => {
-    if (!db) return null;
+    if (!db) {
+        const rentals = getFromLocalStorage<Rental[]>('rentals', []);
+        return rentals.find(r => r.id === id) || null;
+    }
     const docRef = doc(db, 'rentals', id);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
@@ -108,14 +202,34 @@ export const getRentalById = async (id: string): Promise<Rental | null> => {
 };
 
 export const addRental = (rental: Omit<Rental, 'id'>) => {
-    if (!db) throw new Error("Database not initialized");
+    if (!db) {
+        const rentals = getFromLocalStorage<Rental[]>('rentals', []);
+        const newRental: Rental = {
+            paymentStatus: 'pending',
+            paymentHistory: [],
+            pickupChecklist: {},
+            returnChecklist: {},
+            ...rental,
+            id: `local_${Date.now()}`,
+        };
+        setToLocalStorage('rentals', [...rentals, newRental]);
+        return Promise.resolve();
+    }
     return addDoc(collection(db, 'rentals'), rental);
 };
-export const updateRental = (id: string, data: Partial<Rental>) => db && updateDoc(doc(db, 'rentals', id), data);
+export const updateRental = (id: string, data: Partial<Rental>) => {
+    if (!db) {
+        const rentals = getFromLocalStorage<Rental[]>('rentals', []);
+        const updatedRentals = rentals.map(r => r.id === id ? { ...r, ...data } : r);
+        setToLocalStorage('rentals', updatedRentals);
+        return Promise.resolve();
+    }
+    return updateDoc(doc(db, 'rentals', id), data);
+};
 
 // Expense Management
 export const getExpenses = async (): Promise<Expense[]> => {
-    if (!db) return [];
+    if (!db) return getFromLocalStorage<Expense[]>('expenses', []);
     const snapshot = await getDocs(collection(db, 'expenses'));
     return snapshot.docs.map(doc => ({
         ...doc.data() as Omit<Expense, 'id'>,
@@ -123,11 +237,19 @@ export const getExpenses = async (): Promise<Expense[]> => {
         date: timestampToIsoDate(doc.data().date),
     }));
 };
-export const addExpense = (expense: Omit<Expense, 'id'>) => db && addDoc(collection(db, 'expenses'), expense);
+export const addExpense = (expense: Omit<Expense, 'id'>) => {
+    if (!db) {
+        const expenses = getFromLocalStorage<Expense[]>('expenses', []);
+        const newExpense = { ...expense, id: `local_${Date.now()}` };
+        setToLocalStorage('expenses', [...expenses, newExpense]);
+        return Promise.resolve();
+    }
+    return addDoc(collection(db, 'expenses'), expense);
+};
 
 // Revenue Management (for non-rental income)
 export const getRevenues = async (): Promise<Revenue[]> => {
-    if (!db) return [];
+    if (!db) return getFromLocalStorage<Revenue[]>('revenues', []);
     const snapshot = await getDocs(collection(db, 'revenues'));
     return snapshot.docs.map(doc => ({
         ...doc.data() as Omit<Revenue, 'id'>,
@@ -135,7 +257,15 @@ export const getRevenues = async (): Promise<Revenue[]> => {
         date: timestampToIsoDate(doc.data().date),
     }));
 };
-export const addRevenue = (revenue: Omit<Revenue, 'id'>) => db && addDoc(collection(db, 'revenues'), revenue);
+export const addRevenue = (revenue: Omit<Revenue, 'id'>) => {
+    if (!db) {
+        const revenues = getFromLocalStorage<Revenue[]>('revenues', []);
+        const newRevenue = { ...revenue, id: `local_${Date.now()}` };
+        setToLocalStorage('revenues', [...revenues, newRevenue]);
+        return Promise.resolve();
+    }
+    return addDoc(collection(db, 'revenues'), revenue);
+};
 
 
 // Dashboard Stats
@@ -189,7 +319,7 @@ export const getDashboardStats = async () => {
 
 // Módulo 7: Settings & Reports
 export const getCompanySettings = async (): Promise<CompanySettings | null> => {
-    if (!db) return null;
+    if (!db) return getFromLocalStorage<CompanySettings | null>('settings', null);
     const docRef = doc(db, 'settings', 'company');
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
@@ -198,7 +328,11 @@ export const getCompanySettings = async (): Promise<CompanySettings | null> => {
     return null;
 };
 export const updateCompanySettings = (settings: Omit<CompanySettings, 'id'>) => {
-    if (!db) throw new Error("Database not initialized");
+    if (!db) {
+        const settingsWithId: CompanySettings = { ...settings, id: 'company' };
+        setToLocalStorage('settings', settingsWithId);
+        return Promise.resolve();
+    }
     return setDoc(doc(db, 'settings', 'company'), settings);
 };
 
