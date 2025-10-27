@@ -44,7 +44,7 @@ export interface Client {
   notes?: string;
 }
 
-export type PaymentMethod = 'pix' | 'card' | 'cash' | 'bank_transfer' | 'other';
+export type PaymentMethod = 'pix' | 'card' | 'cash' | 'bank_transfer' | 'other' | 'payment_link';
 
 export interface Payment {
   id: string;
@@ -133,4 +133,5 @@ export interface CompanySettings {
     cnpj: string;
     address: string;
     logoUrl: string;
+    pixKey?: string;
 }

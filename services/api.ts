@@ -96,6 +96,17 @@ export const getRentals = async (): Promise<Rental[]> => {
     const snapshot = await getDocs(collection(db, 'rentals'));
     return snapshot.docs.map(convertDocToRental);
 };
+
+export const getRentalById = async (id: string): Promise<Rental | null> => {
+    if (!db) return null;
+    const docRef = doc(db, 'rentals', id);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+        return convertDocToRental(docSnap);
+    }
+    return null;
+};
+
 export const addRental = (rental: Omit<Rental, 'id'>) => {
     if (!db) throw new Error("Database not initialized");
     return addDoc(collection(db, 'rentals'), rental);
