@@ -1,0 +1,7 @@
+{
+  "name": "Gestor de Festas Pegue e Monte",
+  "description": "Uma aplicação para ajudar a gerenciar o estoque, aluguéis e eventos de uma empresa de aluguel de itens para festas no estilo 'pegue e monte'. Inclui um gerador de ideias para temas de festas com IA.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
