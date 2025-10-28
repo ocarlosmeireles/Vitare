@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getReportsData } from '../services/api';
-import { Package, Users, DollarSign } from './icons';
+import { PackageIcon, Users, DollarSign } from './icons';
 
 interface ItemReport {
     id: string;
@@ -58,7 +58,7 @@ const Reports: React.FC = () => {
         <div className="space-y-8">
             {/* Item Profitability Report */}
             <div className="bg-white p-6 rounded-xl shadow-md">
-                <h2 className="text-xl font-semibold mb-4 flex items-center"><Package className="w-6 h-6 mr-2" /> Rentabilidade por Item</h2>
+                <h2 className="text-xl font-semibold mb-4 flex items-center"><PackageIcon className="w-6 h-6 mr-2" /> Rentabilidade por Item</h2>
                 <p className="text-sm text-slate-500 mb-4">Analise quais itens trazem o melhor retorno sobre o investimento (ROI). ROI = (Lucro / Custo de Compra) * 100.</p>
                 <div className="max-h-[60vh] overflow-y-auto">
                     <table className="w-full text-sm text-left text-slate-500">

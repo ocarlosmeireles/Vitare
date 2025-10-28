@@ -32,33 +32,76 @@ const timestampToIsoDate = (timestamp: any): string => {
     if (typeof timestamp === 'string' && timestamp.includes('T')) {
         return timestamp.split('T')[0];
     }
-    return timestamp;
+    return timestamp || '';
 };
 
-const convertDocToInventoryItem = (doc: any): InventoryItem => ({
-    ...doc.data(),
-    id: doc.id,
-    purchaseCost: doc.data().purchaseCost || 0,
-});
+// --- Data Conversion Functions (to create plain JS objects) ---
 
-const convertDocToRental = (doc: any): Rental => ({
-    ...doc.data(),
-    id: doc.id,
-    eventDate: timestampToIsoDate(doc.data().eventDate),
-    pickupDate: timestampToIsoDate(doc.data().pickupDate),
-    returnDate: timestampToIsoDate(doc.data().returnDate),
-    paymentHistory: doc.data().paymentHistory?.map((p: any) => ({ ...p, date: timestampToIsoDate(p.date) })) || [],
-    pickupChecklist: doc.data().pickupChecklist || {},
-    returnChecklist: doc.data().returnChecklist || {},
-});
+const convertDocToInventoryItem = (doc: any): InventoryItem => {
+    const data = doc.data();
+    return {
+        id: doc.id,
+        name: data.name || '',
+        category: data.category || '',
+        quantity: data.quantity || 0,
+        price: data.price || 0,
+        imageUrl: data.imageUrl || '',
+        status: data.status || 'available',
+        lowStockThreshold: data.lowStockThreshold,
+        maintenanceNotes: data.maintenanceNotes,
+        purchaseCost: data.purchaseCost,
+    };
+};
 
-const convertDocToClient = (doc: any): Client => ({
-    ...doc.data(),
-    id: doc.id,
-    type: doc.data().type || 'pf', // Default to 'pf' for old clients
-    address: doc.data().address || { cep: '', street: '', number: '', neighborhood: '', city: '', state: '' }, // Default address
-});
+const convertDocToRental = (doc: any): Rental => {
+    const data = doc.data();
+    return {
+        id: doc.id,
+        client: data.client || { id: '', name: '' },
+        eventDate: timestampToIsoDate(data.eventDate),
+        pickupDate: timestampToIsoDate(data.pickupDate),
+        returnDate: timestampToIsoDate(data.returnDate),
+        totalValue: data.totalValue || 0,
+        discount: data.discount || 0,
+        notes: data.notes || '',
+        paymentStatus: data.paymentStatus || 'pending',
+        paymentHistory: data.paymentHistory?.map((p: any) => ({
+            id: p.id,
+            date: timestampToIsoDate(p.date),
+            amount: p.amount,
+            method: p.method,
+        })) || [],
+        status: data.status || 'booked',
+        items: data.items || [],
+        kits: data.kits || [],
+        pickupChecklist: data.pickupChecklist || {},
+        returnChecklist: data.returnChecklist || {},
+        deliveryService: data.deliveryService || false,
+        deliveryFee: data.deliveryFee,
+        setupService: data.setupService || false,
+        setupFee: data.setupFee,
+        deliveryAddress: data.deliveryAddress,
+    };
+};
 
+const convertDocToClient = (doc: any): Client => {
+    const data = doc.data();
+    return {
+        id: doc.id,
+        type: data.type || 'pf',
+        name: data.name || '',
+        cpf: data.cpf,
+        birthDate: data.birthDate,
+        cnpj: data.cnpj,
+        legalName: data.legalName,
+        contactName: data.contactName,
+        phone: data.phone || '',
+        email: data.email || '',
+        address: data.address || { cep: '', street: '', number: '', neighborhood: '', city: '', state: '' },
+        howFound: data.howFound,
+        notes: data.notes,
+    };
+};
 
 // Inventory Management
 export const getInventory = async (): Promise<InventoryItem[]> => {
@@ -152,7 +195,16 @@ export const findOrCreateClient = async (clientData: { name: string; phone: stri
 export const getKits = async (): Promise<Kit[]> => {
     if (!db) return getFromLocalStorage<Kit[]>('kits', []);
     const snapshot = await getDocs(collection(db, 'kits'));
-    return snapshot.docs.map(doc => ({ ...doc.data() as Omit<Kit, 'id'>, id: doc.id }));
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            name: data.name || '',
+            price: data.price || 0,
+            itemIds: data.itemIds || [],
+            items: data.items || [],
+        };
+    });
 };
 export const addKit = (kit: Omit<Kit, 'id'>) => {
     if (!db) {
@@ -215,8 +267,22 @@ export const addRental = (rental: Omit<Rental, 'id'>) => {
         setToLocalStorage('rentals', [...rentals, newRental]);
         return Promise.resolve();
     }
-    return addDoc(collection(db, 'rentals'), rental);
+
+    const rentalForFirestore: { [key: string]: any } = {
+        ...rental,
+        eventDate: Timestamp.fromDate(new Date(rental.eventDate)),
+        pickupDate: Timestamp.fromDate(new Date(rental.pickupDate)),
+        returnDate: Timestamp.fromDate(new Date(rental.returnDate)),
+    };
+    if (rental.paymentHistory) {
+        rentalForFirestore.paymentHistory = rental.paymentHistory.map(p => ({
+            ...p,
+            date: Timestamp.fromDate(new Date(p.date))
+        }));
+    }
+    return addDoc(collection(db, 'rentals'), rentalForFirestore);
 };
+
 export const updateRental = (id: string, data: Partial<Rental>) => {
     if (!db) {
         const rentals = getFromLocalStorage<Rental[]>('rentals', []);
@@ -224,19 +290,39 @@ export const updateRental = (id: string, data: Partial<Rental>) => {
         setToLocalStorage('rentals', updatedRentals);
         return Promise.resolve();
     }
-    return updateDoc(doc(db, 'rentals', id), data);
+
+    const dataForFirestore: { [key: string]: any } = { ...data };
+
+    if (data.eventDate) dataForFirestore.eventDate = Timestamp.fromDate(new Date(data.eventDate));
+    if (data.pickupDate) dataForFirestore.pickupDate = Timestamp.fromDate(new Date(data.pickupDate));
+    if (data.returnDate) dataForFirestore.returnDate = Timestamp.fromDate(new Date(data.returnDate));
+    if (data.paymentHistory) {
+        dataForFirestore.paymentHistory = data.paymentHistory.map(p => ({
+            ...p,
+            date: Timestamp.fromDate(new Date(p.date))
+        }));
+    }
+
+    return updateDoc(doc(db, 'rentals', id), dataForFirestore);
 };
 
 // Expense Management
 export const getExpenses = async (): Promise<Expense[]> => {
     if (!db) return getFromLocalStorage<Expense[]>('expenses', []);
     const snapshot = await getDocs(collection(db, 'expenses'));
-    return snapshot.docs.map(doc => ({
-        ...doc.data() as Omit<Expense, 'id'>,
-        id: doc.id,
-        date: timestampToIsoDate(doc.data().date),
-    }));
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            description: data.description || '',
+            category: data.category || '',
+            date: timestampToIsoDate(data.date),
+            amount: data.amount || 0,
+            paymentMethod: data.paymentMethod,
+        };
+    });
 };
+
 export const addExpense = (expense: Omit<Expense, 'id'>) => {
     if (!db) {
         const expenses = getFromLocalStorage<Expense[]>('expenses', []);
@@ -244,19 +330,30 @@ export const addExpense = (expense: Omit<Expense, 'id'>) => {
         setToLocalStorage('expenses', [...expenses, newExpense]);
         return Promise.resolve();
     }
-    return addDoc(collection(db, 'expenses'), expense);
+    const expenseForFirestore = {
+        ...expense,
+        date: Timestamp.fromDate(new Date(expense.date))
+    };
+    return addDoc(collection(db, 'expenses'), expenseForFirestore);
 };
 
 // Revenue Management (for non-rental income)
 export const getRevenues = async (): Promise<Revenue[]> => {
     if (!db) return getFromLocalStorage<Revenue[]>('revenues', []);
     const snapshot = await getDocs(collection(db, 'revenues'));
-    return snapshot.docs.map(doc => ({
-        ...doc.data() as Omit<Revenue, 'id'>,
-        id: doc.id,
-        date: timestampToIsoDate(doc.data().date),
-    }));
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            description: data.description || '',
+            category: data.category || '',
+            date: timestampToIsoDate(data.date),
+            amount: data.amount || 0,
+            paymentMethod: data.paymentMethod,
+        };
+    });
 };
+
 export const addRevenue = (revenue: Omit<Revenue, 'id'>) => {
     if (!db) {
         const revenues = getFromLocalStorage<Revenue[]>('revenues', []);
@@ -264,7 +361,11 @@ export const addRevenue = (revenue: Omit<Revenue, 'id'>) => {
         setToLocalStorage('revenues', [...revenues, newRevenue]);
         return Promise.resolve();
     }
-    return addDoc(collection(db, 'revenues'), revenue);
+    const revenueForFirestore = {
+        ...revenue,
+        date: Timestamp.fromDate(new Date(revenue.date))
+    };
+    return addDoc(collection(db, 'revenues'), revenueForFirestore);
 };
 
 
@@ -275,7 +376,6 @@ export const getDashboardStats = async () => {
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
   
-    // ... (rest of dashboard logic)
     const rentedItems = inventory.filter(i => i.status === 'rented').length;
     const upcomingEvents = rentals.filter(r => new Date(r.eventDate) >= today && r.status === 'booked').length;
     
@@ -323,7 +423,15 @@ export const getCompanySettings = async (): Promise<CompanySettings | null> => {
     const docRef = doc(db, 'settings', 'company');
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-        return { ...docSnap.data() as Omit<CompanySettings, 'id'>, id: 'company' };
+        const data = docSnap.data();
+        return {
+            id: 'company',
+            companyName: data.companyName || '',
+            cnpj: data.cnpj || '',
+            address: data.address || '',
+            logoUrl: data.logoUrl || '',
+            pixKey: data.pixKey,
+        };
     }
     return null;
 };

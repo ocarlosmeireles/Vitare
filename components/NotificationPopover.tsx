@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Notification } from '../types';
-import { TriangleAlert, DollarSign, Package } from './icons';
+import { TriangleAlert, DollarSign, PackageIcon } from './icons';
 
 interface Props {
     notifications: Notification[];
@@ -15,7 +15,7 @@ const NotificationIcon: React.FC<{ type: Notification['type'] }> = ({ type }) =>
         case 'payment_due':
             return <div className="bg-yellow-100 p-2 rounded-full"><DollarSign className="w-5 h-5 text-yellow-600" /></div>;
         case 'low_stock':
-            return <div className="bg-blue-100 p-2 rounded-full"><Package className="w-5 h-5 text-blue-600" /></div>;
+            return <div className="bg-blue-100 p-2 rounded-full"><PackageIcon className="w-5 h-5 text-blue-600" /></div>;
         default:
             return null;
     }

@@ -25,7 +25,18 @@ export const RentalDetailModal: React.FC<Props> = ({ rental, onClose, onUpdate }
 
     useEffect(() => {
         if (rental) {
-            setEditableRental(JSON.parse(JSON.stringify(rental))); // Deep copy
+            // FIX: Create a deep copy of the rental object without using JSON.stringify,
+            // which can fail on complex objects from Firestore, causing a circular structure error.
+            const rentalCopy = {
+                ...rental,
+                client: { ...rental.client },
+                paymentHistory: rental.paymentHistory.map(p => ({ ...p })),
+                items: rental.items.map(i => ({ ...i })),
+                kits: rental.kits ? rental.kits.map(k => ({ ...k, items: k.items.map(i => ({ ...i })) })) : rental.kits,
+                pickupChecklist: { ...rental.pickupChecklist },
+                returnChecklist: { ...rental.returnChecklist },
+            };
+            setEditableRental(rentalCopy);
             setPaymentLink(null);
             setCopySuccess(false);
             getCompanySettings().then(setCompanySettings);

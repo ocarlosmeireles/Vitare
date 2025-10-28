@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getRentals } from '../services/api';
 import { Rental } from '../types';
-import { ChevronLeft, ChevronRight, Package } from './icons';
+import { ChevronLeft, ChevronRight, PackageIcon } from './icons';
 
 const statusColors: { [key in Rental['status']]: { bg: string; text: string; border: string } } = {
   booked: { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-500' },
@@ -38,7 +38,7 @@ const RentalDetailModal: React.FC<{ rental: Rental | null; onClose: () => void }
                         <ul className="mt-1 space-y-2 max-h-48 overflow-y-auto">
                             {rental.items.map(item => (
                                 <li key={item.id} className="flex items-center text-slate-600 bg-slate-50 p-2 rounded-md">
-                                    <Package className="w-4 h-4 mr-3 text-indigo-500 flex-shrink-0" />
+                                    <PackageIcon className="w-4 h-4 mr-3 text-indigo-500 flex-shrink-0" />
                                     <span>{item.name} (Qtd: {item.quantity})</span>
                                 </li>
                             ))}

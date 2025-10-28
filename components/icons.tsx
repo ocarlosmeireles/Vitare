@@ -22,7 +22,7 @@ export const LayoutDashboard: React.FC<React.SVGProps<SVGSVGElement>> = (props) 
   <Icon {...props}><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></Icon>
 );
 
-export const Package: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+export const PackageIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <Icon {...props}><path d="M16.5 9.4a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z" /><path d="M22 10.5V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v4.5" /><path d="m3.5 10.5 2.1 2.3c.4.4 1 .8 1.7.9l.4.1c.9.2 1.9-.2 2.6-1L12 11l2.7 1.8c.7.5 1.7.9 2.6.7l.4-.1c.7-.2 1.3-.5 1.7-.9l2.1-2.3" /><path d="m3.5 18 2.1-2.3c.4-.4 1-.8 1.7-.9l.4-.1c.9-.2 1.9.2 2.6 1L12 17l2.7-1.8c.7-.5 1.7-.9 2.6-.7l.4.1c.7.2 1.3.5 1.7.9l2.1 2.3" /><path d="M22 13.5V18a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-4.5" /></Icon>
 );
 

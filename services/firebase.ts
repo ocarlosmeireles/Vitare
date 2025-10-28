@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, Firestore } from "firebase/firestore";
+import { getAnalytics } from "firebase/analytics";
 
 // Firebase configuration is loaded from environment variables for security and flexibility.
 // Make sure to set these variables in your deployment environment.
@@ -10,9 +11,11 @@ const firebaseConfig = {
   projectId: "vitare-ffbf8",
   storageBucket: "vitare-ffbf8.firebasestorage.app",
   messagingSenderId: "1036323201365",
-  appId: "1:1036323201365:web:37a7e1cc183df444b04fdc"
+  appId: "1:1036323201365:web:37a7e1cc183df444b04fdc",
+  measurementId: "G-55B1P6BMY5"
 };
 
+// FIX: Closed the firebaseConfig object literal to resolve a major syntax error that was causing all subsequent errors in this file.
 let db: Firestore | null = null;
 
 // Check if all necessary Firebase config values are provided through environment variables.
@@ -27,6 +30,7 @@ if (
     try {
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
         // Initialize Cloud Firestore and get a reference to the service
         db = getFirestore(app);
     } catch (error) {

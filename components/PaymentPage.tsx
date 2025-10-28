@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getRentalById, getCompanySettings, updateRental } from '../services/api';
 import { Rental, CompanySettings, Payment } from '../types';
-import { PartyPopper, CheckCircle, Package } from './icons';
+import { PartyPopper, CheckCircle, PackageIcon } from './icons';
 
 declare const QRCode: any;
 
@@ -119,8 +119,8 @@ const PaymentPage: React.FC<Props> = ({ rentalId }) => {
                         <div className="bg-slate-50 rounded-lg p-4 mb-6">
                             <h3 className="font-semibold mb-2">Itens do Aluguel</h3>
                             <ul className="text-sm space-y-1">
-                                {rental.kits?.map(k => <li key={k.id} className="flex items-center"><Package className="w-4 h-4 mr-2 text-slate-500"/>{k.name} (Kit)</li>)}
-                                {rental.items.map(i => <li key={i.id} className="flex items-center"><Package className="w-4 h-4 mr-2 text-slate-500"/>{i.name} (Qtd: {i.quantity})</li>)}
+                                {rental.kits?.map(k => <li key={k.id} className="flex items-center"><PackageIcon className="w-4 h-4 mr-2 text-slate-500"/>{k.name} (Kit)</li>)}
+                                {rental.items.map(i => <li key={i.id} className="flex items-center"><PackageIcon className="w-4 h-4 mr-2 text-slate-500"/>{i.name} (Qtd: {i.quantity})</li>)}
                             </ul>
                             <hr className="my-3"/>
                              <div className="space-y-1 text-sm">
