@@ -16,7 +16,7 @@ import Settings from './components/Settings';
 import NotificationPopover from './components/NotificationPopover';
 import { Page, Notification, Rental, InventoryItem } from './types';
 import { getRentals, getInventory } from './services/api';
-import { PackageIcon, LayoutDashboard, Calendar, Lightbulb, Users, Layers, Banknote, Sparkles, Wrench, Bell, Truck, BarChart3, Settings as SettingsIcon } from './components/icons';
+import { Package, LayoutDashboard, Calendar, Lightbulb, Users, Layers, Banknote, Sparkles, Wrench, Bell, Truck, BarChart3, Settings as SettingsIcon } from './components/icons';
 
 const AdminApp: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
@@ -118,7 +118,7 @@ const AdminApp: React.FC = () => {
         case 'dashboard':
             return { title: 'Dashboard', icon: <LayoutDashboard className="w-6 h-6 mr-2" /> };
         case 'inventory':
-            return { title: 'Gerenciar Estoque', icon: <PackageIcon className="w-6 h-6 mr-2" /> };
+            return { title: 'Gerenciar Estoque', icon: <Package className="w-6 h-6 mr-2" /> };
         case 'rentals':
             return { title: 'Aluguéis e Eventos', icon: <Calendar className="w-6 h-6 mr-2" /> };
         case 'clients':

@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { getInventory, getRentals, findOrCreateClient, addRental, getCompanySettings } from '../services/api';
 import { InventoryItem, Rental, Kit, CompanySettings, Payment } from '../types';
-import { PartyPopper, ShoppingCart, X, Trash2, CheckCircle } from './icons';
+import { PartyPopper, ShoppingCart, X, Trash2, CheckCircle, Copy } from './icons';
 
 type CartItem = Pick<InventoryItem, 'id' | 'name' | 'price'>;
 
@@ -14,7 +15,13 @@ const PublicCatalog: React.FC = () => {
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [isCartSidebarOpen, setIsCartSidebarOpen] = useState(false);
     const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
-    const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+    const [checkoutStep, setCheckoutStep] = useState<'info' | 'payment' | 'success' | 'error'>('info');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [clientInfo, setClientInfo] = useState({ name: '', phone: '', email: '' });
+    const [copySuccess, setCopySuccess] = useState(false);
+    
+    const pixCopyPasteCode = '00020126360014br.gov.bcb.pix0114+5511999999999520400005303986540550.005802BR5913NOME_DA_EMPRESA6009SAO_PAULO62070503***6304E2A6';
+
 
     useEffect(() => {
         const fetchData = async () => {
@@ -55,10 +62,10 @@ const PublicCatalog: React.FC = () => {
         setCartItems(prev => prev.filter(item => item.id !== itemId));
     };
 
-    const handleBooking = async (clientData: { name: string; phone: string; email: string }) => {
-        setSubmissionStatus('submitting');
+    const handleBooking = async () => {
+        setIsSubmitting(true);
         try {
-            const client = await findOrCreateClient(clientData);
+            const client = await findOrCreateClient(clientInfo);
             const totalValue = cartItems.reduce((sum, item) => sum + item.price, 0);
             const depositAmount = totalValue * 0.5;
 
@@ -66,7 +73,7 @@ const PublicCatalog: React.FC = () => {
                 id: `payment_${Date.now()}`,
                 date: new Date().toISOString().split('T')[0],
                 amount: depositAmount,
-                method: 'pix' // Simulating PIX payment
+                method: 'pix'
             };
             
             const newRental: Omit<Rental, 'id'> = {
@@ -87,16 +94,109 @@ const PublicCatalog: React.FC = () => {
             };
             
             await addRental(newRental);
-            setSubmissionStatus('success');
+            setCheckoutStep('success');
             setCartItems([]);
             setIsCartSidebarOpen(false);
         } catch (error) {
             console.error("Booking submission failed", error);
-            setSubmissionStatus('error');
+            setCheckoutStep('error');
+        } finally {
+            setIsSubmitting(false);
         }
     };
     
+    const handleInfoSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget as HTMLFormElement);
+        setClientInfo({
+            name: formData.get('name') as string,
+            phone: formData.get('phone') as string,
+            email: formData.get('email') as string,
+        });
+        setCheckoutStep('payment');
+    };
+
+    const handleCloseModal = () => {
+        setIsCheckoutModalOpen(false);
+        // Delay resetting the step to avoid UI flicker
+        setTimeout(() => setCheckoutStep('info'), 300);
+    }
+    
+    const handleCopyToClipboard = () => {
+        navigator.clipboard.writeText(pixCopyPasteCode).then(() => {
+            setCopySuccess(true);
+            setTimeout(() => setCopySuccess(false), 2000);
+        });
+    };
+    
     const totalValue = cartItems.reduce((sum, item) => sum + item.price, 0);
+
+    const renderModalContent = () => {
+        switch(checkoutStep) {
+            case 'success':
+                return (
+                    <div className="text-center">
+                        <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4"/>
+                        <h2 className="text-2xl font-bold text-slate-800 mb-2">Reserva Confirmada!</h2>
+                        <p className="text-slate-600 mb-6">Sua reserva foi efetuada com sucesso. Entraremos em contato para alinhar os detalhes da retirada. Obrigado!</p>
+                        <button onClick={handleCloseModal} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700">Fechar</button>
+                    </div>
+                );
+            case 'error':
+                 return (
+                     <div className="text-center">
+                        <h2 className="text-2xl font-bold text-red-600 mb-4">Ocorreu um Erro</h2>
+                        <p className="text-slate-600 mb-6">Não foi possível processar sua reserva. Por favor, tente novamente mais tarde ou entre em contato conosco diretamente.</p>
+                        <button onClick={() => setCheckoutStep('info')} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700">Tentar Novamente</button>
+                    </div>
+                );
+            case 'payment':
+                return (
+                    <div>
+                        <h2 className="text-2xl font-bold text-slate-800 mb-2">Pague com Pix para Confirmar</h2>
+                        <p className="text-slate-500 mb-4">Aponte a câmera do seu celular ou use o código abaixo.</p>
+                        <div className="flex justify-center my-6">
+                            <img src="https://storage.googleapis.com/support-kms-prod/ZJ63yv7f6zY2X3aYyifGmLzWHbUcvSp3V2V8" alt="QR Code PIX" className="w-48 h-48 rounded-lg"/>
+                        </div>
+                        <div className="relative mb-4">
+                            <input type="text" readOnly value={pixCopyPasteCode} className="w-full p-2 pr-10 border border-slate-300 rounded-lg bg-slate-100 text-xs"/>
+                             <button onClick={handleCopyToClipboard} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-indigo-600">
+                                <Copy className="w-5 h-5"/>
+                            </button>
+                        </div>
+                         {copySuccess && <p className="text-green-600 text-center text-sm mb-4">Código copiado!</p>}
+                         <button onClick={handleBooking} disabled={isSubmitting} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 disabled:bg-slate-400">
+                            {isSubmitting ? 'Confirmando...' : 'Já Fiz o Pagamento'}
+                         </button>
+                         <button onClick={() => setCheckoutStep('info')} className="w-full text-center text-sm text-slate-500 mt-3 hover:text-indigo-600">Voltar</button>
+                    </div>
+                );
+            case 'info':
+            default:
+                return (
+                    <form onSubmit={handleInfoSubmit}>
+                        <h2 className="text-2xl font-bold text-slate-800 mb-4">Finalizar Reserva</h2>
+                        <p className="text-slate-500 mb-4">Preencha seus dados e pague o sinal de 50% para garantir sua reserva.</p>
+                        <div className="space-y-4">
+                            <input name="name" type="text" placeholder="Nome Completo" className="w-full p-2 border border-slate-300 rounded-lg" required />
+                            <input name="phone" type="tel" placeholder="Telefone (com DDD)" className="w-full p-2 border border-slate-300 rounded-lg" required />
+                            <input name="email" type="email" placeholder="E-mail" className="w-full p-2 border border-slate-300 rounded-lg" required />
+                        </div>
+                        <div className="mt-6 p-4 bg-slate-50 rounded-lg text-center">
+                            <p className="text-slate-600">Valor do sinal (50%):</p>
+                            <p className="text-3xl font-bold text-indigo-700">{(totalValue * 0.5).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                        </div>
+                        <div className="flex justify-end gap-4 mt-6">
+                            <button type="button" onClick={handleCloseModal} className="py-2 px-4 bg-slate-200 text-slate-800 font-semibold rounded-lg hover:bg-slate-300">Cancelar</button>
+                            <button type="submit" className="py-2 px-4 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700">
+                                Continuar para Pagamento
+                            </button>
+                        </div>
+                    </form>
+                );
+        }
+    }
+
 
     return (
         <div className="bg-slate-50 min-h-screen">
@@ -207,49 +307,7 @@ const PublicCatalog: React.FC = () => {
              {isCheckoutModalOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
-                        {submissionStatus === 'success' ? (
-                            <div className="text-center">
-                                <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4"/>
-                                <h2 className="text-2xl font-bold text-slate-800 mb-2">Reserva Confirmada!</h2>
-                                <p className="text-slate-600 mb-6">Sua reserva foi efetuada com sucesso. Entraremos em contato para alinhar os detalhes da retirada. Obrigado!</p>
-                                <button onClick={() => { setIsCheckoutModalOpen(false); setSubmissionStatus('idle'); }} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700">Fechar</button>
-                            </div>
-                        ) : submissionStatus === 'error' ? (
-                             <div>
-                                <h2 className="text-2xl font-bold text-red-600 mb-4">Ocorreu um Erro</h2>
-                                <p className="text-slate-600 mb-6">Não foi possível processar sua reserva. Por favor, tente novamente mais tarde ou entre em contato conosco diretamente.</p>
-                                <button onClick={() => setSubmissionStatus('idle')} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700">Tentar Novamente</button>
-                            </div>
-                        ) : (
-                            <form onSubmit={(e) => {
-                                e.preventDefault();
-                                const formData = new FormData(e.currentTarget);
-                                handleBooking({
-                                    name: formData.get('name') as string,
-                                    phone: formData.get('phone') as string,
-                                    email: formData.get('email') as string,
-                                });
-                            }}>
-                                <h2 className="text-2xl font-bold text-slate-800 mb-4">Finalizar Reserva</h2>
-                                <p className="text-slate-500 mb-4">Preencha seus dados e pague o sinal de 50% para garantir sua reserva.</p>
-                                <div className="space-y-4">
-                                    <input name="name" type="text" placeholder="Nome Completo" className="w-full p-2 border border-slate-300 rounded-lg" required />
-                                    <input name="phone" type="tel" placeholder="Telefone (com DDD)" className="w-full p-2 border border-slate-300 rounded-lg" required />
-                                    <input name="email" type="email" placeholder="E-mail" className="w-full p-2 border border-slate-300 rounded-lg" required />
-                                </div>
-                                <div className="mt-6 p-4 bg-slate-50 rounded-lg text-center">
-                                    <p className="text-slate-600">Valor do sinal (50%):</p>
-                                    <p className="text-3xl font-bold text-indigo-700">{(totalValue * 0.5).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-                                    <p className="text-xs text-slate-500 mt-2">(Simulação de pagamento. Nenhuma cobrança será feita.)</p>
-                                </div>
-                                <div className="flex justify-end gap-4 mt-6">
-                                    <button type="button" onClick={() => setIsCheckoutModalOpen(false)} className="py-2 px-4 bg-slate-200 text-slate-800 font-semibold rounded-lg hover:bg-slate-300">Cancelar</button>
-                                    <button type="submit" disabled={submissionStatus === 'submitting'} className="py-2 px-4 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 disabled:bg-slate-400">
-                                        {submissionStatus === 'submitting' ? 'Processando...' : 'Pagar Sinal e Reservar'}
-                                    </button>
-                                </div>
-                            </form>
-                        )}
+                       {renderModalContent()}
                     </div>
                 </div>
             )}

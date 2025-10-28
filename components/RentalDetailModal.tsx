@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Rental, Payment, InventoryItem, Kit, CompanySettings, PaymentMethod } from '../types';
 import { updateRental, updateInventoryItem, getCompanySettings } from '../services/api';
 import { generateRentalContract } from '../services/pdfGenerator';
-import { X, DollarSign, ClipboardList, ClipboardCheck, CreditCard, Trash2, Wrench, QrCode, Truck, FileText, Link, Copy } from './icons';
+import { X, DollarSign, ClipboardList, ClipboardCheck, CreditCard, Trash2, Wrench, QrCode, Truck, FileText } from './icons';
 import QrScanner from './QrScanner';
 
 interface Props {
@@ -20,25 +19,10 @@ export const RentalDetailModal: React.FC<Props> = ({ rental, onClose, onUpdate }
     const [isScannerOpen, setIsScannerOpen] = useState(false);
     const [scanFeedback, setScanFeedback] = useState<{type: 'success' | 'error', message: string} | null>(null);
     const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
-    const [paymentLink, setPaymentLink] = useState<string | null>(null);
-    const [copySuccess, setCopySuccess] = useState(false);
 
     useEffect(() => {
         if (rental) {
-            // FIX: Create a deep copy of the rental object without using JSON.stringify,
-            // which can fail on complex objects from Firestore, causing a circular structure error.
-            const rentalCopy = {
-                ...rental,
-                client: { ...rental.client },
-                paymentHistory: rental.paymentHistory.map(p => ({ ...p })),
-                items: rental.items.map(i => ({ ...i })),
-                kits: rental.kits ? rental.kits.map(k => ({ ...k, items: k.items.map(i => ({ ...i })) })) : rental.kits,
-                pickupChecklist: { ...rental.pickupChecklist },
-                returnChecklist: { ...rental.returnChecklist },
-            };
-            setEditableRental(rentalCopy);
-            setPaymentLink(null);
-            setCopySuccess(false);
+            setEditableRental(JSON.parse(JSON.stringify(rental))); // Deep copy
             getCompanySettings().then(setCompanySettings);
         }
     }, [rental]);
@@ -188,20 +172,6 @@ export const RentalDetailModal: React.FC<Props> = ({ rental, onClose, onUpdate }
         generateRentalContract(rental, companySettings);
     };
 
-    const handleGeneratePaymentLink = () => {
-        const link = `${window.location.origin}${window.location.pathname}#/pay/${rental.id}`;
-        setPaymentLink(link);
-    };
-    
-    const copyToClipboard = () => {
-        if(paymentLink) {
-            navigator.clipboard.writeText(paymentLink).then(() => {
-                setCopySuccess(true);
-                setTimeout(() => setCopySuccess(false), 2000);
-            });
-        }
-    };
-
     const totalPaid = editableRental.paymentHistory.reduce((sum, p) => sum + p.amount, 0);
     const balanceDue = (editableRental.totalValue - (editableRental.discount || 0)) - totalPaid;
 
@@ -327,24 +297,20 @@ export const RentalDetailModal: React.FC<Props> = ({ rental, onClose, onUpdate }
                                     <div className="flex justify-between font-bold text-red-600"><span>Saldo Devedor:</span> <span>{balanceDue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
                                  </div>
                                </div>
+                                <div className="p-4 border rounded-lg">
+                                    <h3 className="font-semibold mb-2 flex items-center"><Truck className="w-4 h-4 mr-2"/>Serviços Adicionais</h3>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center"><input type="checkbox" name="deliveryService" checked={editableRental.deliveryService} onChange={handleInputChange} className="h-4 w-4 rounded"/><label className="ml-2 text-sm">Serviço de Entrega</label></div>
+                                        {editableRental.deliveryService && <div className="pl-6 space-y-2">
+                                            <input type="text" name="deliveryAddress" placeholder="Endereço de entrega" value={editableRental.deliveryAddress} onChange={handleInputChange} className="w-full p-2 border rounded-md text-sm" />
+                                            <input type="number" name="deliveryFee" placeholder="Taxa de Entrega" value={editableRental.deliveryFee} onChange={handleInputChange} className="w-1/2 p-2 border rounded-md text-sm" />
+                                        </div>}
+                                         <div className="flex items-center"><input type="checkbox" name="setupService" checked={editableRental.setupService} onChange={handleInputChange} className="h-4 w-4 rounded"/><label className="ml-2 text-sm">Serviço de Montagem</label></div>
+                                         {editableRental.setupService && <div className="pl-6"><input type="number" name="setupFee" placeholder="Taxa de Montagem" value={editableRental.setupFee} onChange={handleInputChange} className="w-1/2 p-2 border rounded-md text-sm" /></div>}
+                                    </div>
+                                </div>
                                <div className="p-4 border rounded-lg">
-                                    <h3 className="font-semibold mb-2">Link de Pagamento</h3>
-                                    {paymentLink ? (
-                                        <div className="relative">
-                                            <input type="text" readOnly value={paymentLink} className="w-full p-2 pr-10 border bg-slate-100 rounded-md text-sm" />
-                                            <button onClick={copyToClipboard} className="absolute top-1/2 right-2 -translate-y-1/2 p-1 text-slate-500 hover:bg-slate-200 rounded-md">
-                                                {copySuccess ? <div className="w-5 h-5 text-green-600">✓</div> : <Copy className="w-5 h-5"/>}
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <button onClick={handleGeneratePaymentLink} disabled={!companySettings?.pixKey} className="w-full bg-slate-600 text-white p-2 rounded-lg hover:bg-slate-700 flex items-center justify-center disabled:bg-slate-400 disabled:cursor-not-allowed">
-                                            <Link className="w-4 h-4 mr-2"/> Gerar Link para Cliente
-                                        </button>
-                                    )}
-                                    {!companySettings?.pixKey && <p className="text-xs text-red-500 mt-1">Adicione uma chave PIX nas Configurações para habilitar esta função.</p>}
-                               </div>
-                               <div className="p-4 border rounded-lg">
-                                    <h3 className="font-semibold mb-2">Adicionar Pagamento Manual</h3>
+                                    <h3 className="font-semibold mb-2">Adicionar Pagamento</h3>
                                     <div className="grid grid-cols-2 gap-2">
                                         <input type="number" placeholder="Valor" value={newPayment.amount || ''} onChange={e => setNewPayment(p => ({...p, amount: parseFloat(e.target.value) || 0}))} className="p-2 border rounded-md w-full"/>
                                         <input type="date" value={newPayment.date} onChange={e => setNewPayment(p => ({...p, date: e.target.value}))} className="p-2 border rounded-md"/>
@@ -357,6 +323,10 @@ export const RentalDetailModal: React.FC<Props> = ({ rental, onClose, onUpdate }
                                         </select>
                                     </div>
                                     <button onClick={handleAddPayment} className="w-full mt-2 bg-green-500 text-white p-2 rounded-lg hover:bg-green-600">Adicionar</button>
+                               </div>
+                               <div>
+                                    <label className="font-semibold">Observações</label>
+                                    <textarea name="notes" value={editableRental.notes} onChange={handleInputChange} className="w-full p-2 border rounded-lg mt-1" rows={3}></textarea>
                                </div>
                             </div>
                             {/* Right: Payment History */}

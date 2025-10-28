@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 // Using SVG icons as components
@@ -22,7 +23,7 @@ export const LayoutDashboard: React.FC<React.SVGProps<SVGSVGElement>> = (props) 
   <Icon {...props}><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></Icon>
 );
 
-export const PackageIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+export const Package: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <Icon {...props}><path d="M16.5 9.4a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z" /><path d="M22 10.5V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v4.5" /><path d="m3.5 10.5 2.1 2.3c.4.4 1 .8 1.7.9l.4.1c.9.2 1.9-.2 2.6-1L12 11l2.7 1.8c.7.5 1.7.9 2.6.7l.4-.1c.7-.2 1.3-.5 1.7-.9l2.1-2.3" /><path d="m3.5 18 2.1-2.3c.4-.4 1-.8 1.7-.9l.4-.1c.9-.2 1.9.2 2.6 1L12 17l2.7-1.8c.7-.5 1.7-.9 2.6-.7l.4.1c.7.2 1.3.5 1.7.9l2.1 2.3" /><path d="M22 13.5V18a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-4.5" /></Icon>
 );
 
@@ -182,11 +183,6 @@ export const Save: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <Icon {...props}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></Icon>
 );
 
-// FIX: Added missing Link and Copy icons for use in RentalDetailModal.
-export const Link: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <Icon {...props}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></Icon>
-);
-
 export const Copy: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <Icon {...props}><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></Icon>
+    <Icon {...props}><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></Icon>
 );

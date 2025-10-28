@@ -229,7 +229,6 @@ const Financial: React.FC = () => {
         card: 'Cartão',
         cash: 'Dinheiro',
         bank_transfer: 'Transferência',
-        payment_link: 'Link de Pagamento',
         other: 'Outro'
     };
 

@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { getDashboardStats } from '../services/api';
-import { PackageIcon, PackageCheck, CalendarClock, DollarSign, ArrowUp, ArrowDown, Banknote } from './icons';
+import { Package, PackageCheck, CalendarClock, DollarSign, ArrowUp, ArrowDown, Banknote } from './icons';
 
 interface Stats {
   totalItems: number;
@@ -115,7 +115,7 @@ const Dashboard: React.FC = () => {
     <div className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             <StatCard 
-                icon={<PackageIcon className="w-6 h-6 text-blue-800"/>} 
+                icon={<Package className="w-6 h-6 text-blue-800"/>} 
                 title="Total de Itens" 
                 value={stats?.totalItems ?? 0}
                 color="bg-blue-100"

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Page } from '../types';
-import { LayoutDashboard, PackageIcon, Calendar, Lightbulb, PartyPopper, Users, Layers, Banknote, Sparkles, Wrench, Truck, BarChart3, Settings } from './icons';
+import { LayoutDashboard, Package, Calendar, Lightbulb, PartyPopper, Users, Layers, Banknote, Sparkles, Wrench, Truck, BarChart3, Settings } from './icons';
 
 interface SidebarProps {
   currentPage: Page;
@@ -11,7 +11,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard /> },
     { id: 'rentals', label: 'Aluguéis', icon: <Calendar /> },
-    { id: 'inventory', label: 'Estoque', icon: <PackageIcon /> },
+    { id: 'inventory', label: 'Estoque', icon: <Package /> },
     { id: 'kits', label: 'Kits', icon: <Layers /> },
     { id: 'clients', label: 'Clientes', icon: <Users /> },
     { id: 'logistics', label: 'Logística', icon: <Truck /> },

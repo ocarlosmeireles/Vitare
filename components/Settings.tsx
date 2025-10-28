@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { getCompanySettings, updateCompanySettings } from '../services/api';
 import { CompanySettings as CompanySettingsType } from '../types';
@@ -10,7 +9,6 @@ const Settings: React.FC = () => {
         cnpj: '',
         address: '',
         logoUrl: '',
-        pixKey: '',
     });
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -114,19 +112,6 @@ const Settings: React.FC = () => {
                         <img src={settings.logoUrl} alt="Pré-visualização do logo" className="max-h-24 mx-auto"/>
                     </div>
                 )}
-                 <div>
-                    <label htmlFor="pixKey" className="block text-sm font-medium text-slate-700 mb-1">Chave PIX</label>
-                    <input
-                        type="text"
-                        name="pixKey"
-                        id="pixKey"
-                        value={settings.pixKey || ''}
-                        onChange={handleInputChange}
-                        className="w-full p-2 border border-slate-300 rounded-lg"
-                        placeholder="Ex: CNPJ, e-mail, telefone ou chave aleatória"
-                    />
-                     <p className="text-xs text-slate-500 mt-1">Esta chave será exibida para seus clientes na página de pagamento.</p>
-                </div>
 
 
                 <div className="flex justify-end items-center gap-4 pt-4 border-t">
