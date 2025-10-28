@@ -46,7 +46,6 @@ const KitFormModal: React.FC<KitFormModalProps> = ({ isOpen, onClose, onSave, ki
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
-        // Fix: Explicitly type `itemIds` as `string[]` to resolve type inference issue where it was being inferred as `unknown[]`.
         const itemIds: string[] = Array.from(selectedItems);
         const items = itemIds.map(id => {
             const item = inventory.find(i => i.id === id);

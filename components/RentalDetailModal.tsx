@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Rental, Payment, InventoryItem, Kit, CompanySettings, PaymentMethod } from '../types';
 import { updateRental, updateInventoryItem, getCompanySettings } from '../services/api';

@@ -1,4 +1,5 @@
 
+
 export interface InventoryItem {
   id: string;
   name: string;
@@ -133,4 +134,11 @@ export interface CompanySettings {
     cnpj: string;
     address: string;
     logoUrl: string;
+    paymentInfo?: {
+      pixKey: string;
+      bankName: string;
+      agency: string;
+      account: string;
+    };
+    contractTerms?: string;
 }

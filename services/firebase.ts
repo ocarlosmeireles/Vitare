@@ -1,18 +1,18 @@
 import { initializeApp } from "firebase/app";
+// FIX: Import Firestore and getFirestore
 import { getFirestore, Firestore } from "firebase/firestore";
-
 // Firebase configuration is loaded from environment variables for security and flexibility.
 // Make sure to set these variables in your deployment environment.
 // See: https://firebase.google.com/docs/web/setup#available-libraries
 const firebaseConfig = {
-  apiKey: "AIzaSyBhAvF6BG2rRVuyH2HnnsKyVJw-YyLHGI4",
-  authDomain: "celulas-atitude-caxias.firebaseapp.com",
-  projectId: "celulas-atitude-caxias",
-  storageBucket: "celulas-atitude-caxias.firebasestorage.app",
-  messagingSenderId: "1064676815509",
-  appId: "1:1064676815509:web:99e06357b49021cc62219c",
-  measurementId: "G-B40FCNB3VD"
+  apiKey: "AIzaSyCEag4jiJvuuKw8UahjrO9einyBAGaeYuE",
+  authDomain: "sistemavitare.firebaseapp.com",
+  projectId: "sistemavitare",
+  storageBucket: "sistemavitare.firebasestorage.app",
+  messagingSenderId: "701607652625",
+  appId: "1:701607652625:web:e06ea2ad8ceec29e2b30b0"
 };
+
 
 let db: Firestore | null = null;
 

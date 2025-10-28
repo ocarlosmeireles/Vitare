@@ -128,17 +128,35 @@ const AddRentalModal: React.FC<Props> = ({ isOpen, onClose, onRentalAdded }) => 
         
         setIsSubmitting(true);
         try {
-            const allItemsForRental = [...selectedItems];
-            // Only add kit items if they aren't already there as individual items
-            const selectedItemIds = new Set(selectedItems.map(i => i.id));
+            // Aggregate all items from individual selections and kits to ensure correct inventory tracking
+            const aggregatedItems = new Map<string, SelectedItem>();
+
+            // Add individual items first
+            selectedItems.forEach(item => {
+                aggregatedItems.set(item.id, { ...item });
+            });
+
+            // Add items from kits, summing quantities
             selectedKits.forEach(kit => {
                 kit.itemIds.forEach(itemId => {
-                    if(!selectedItemIds.has(itemId)){
+                    const existingItem = aggregatedItems.get(itemId);
+                    if (existingItem) {
+                        existingItem.quantity += 1;
+                    } else {
                         const invItem = inventory.find(i => i.id === itemId);
-                        if(invItem) allItemsForRental.push({id: invItem.id, name: invItem.name, price: invItem.price, quantity: 1});
+                        if (invItem) {
+                            aggregatedItems.set(itemId, {
+                                id: invItem.id,
+                                name: invItem.name,
+                                price: invItem.price,
+                                quantity: 1,
+                            });
+                        }
                     }
-                })
+                });
             });
+
+            const allItemsForRental = Array.from(aggregatedItems.values());
 
             const newRental: Omit<Rental, 'id' | 'paymentStatus' | 'paymentHistory' | 'pickupChecklist' | 'returnChecklist'> = {
                 client: { id: selectedClient.id, name: selectedClient.name },

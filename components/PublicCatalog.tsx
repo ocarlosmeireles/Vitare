@@ -1,8 +1,9 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { getInventory, getRentals, findOrCreateClient, addRental, getCompanySettings } from '../services/api';
 import { InventoryItem, Rental, Kit, CompanySettings, Payment } from '../types';
-import { PartyPopper, ShoppingCart, X, Trash2, CheckCircle, Copy } from './icons';
+import { PartyPopper, ShoppingCart, X, Trash2, CheckCircle, Copy, Banknote } from './icons';
 
 type CartItem = Pick<InventoryItem, 'id' | 'name' | 'price'>;
 
@@ -20,8 +21,6 @@ const PublicCatalog: React.FC = () => {
     const [clientInfo, setClientInfo] = useState({ name: '', phone: '', email: '' });
     const [copySuccess, setCopySuccess] = useState(false);
     
-    const pixCopyPasteCode = '00020126360014br.gov.bcb.pix0114+5511999999999520400005303986540550.005802BR5913NOME_DA_EMPRESA6009SAO_PAULO62070503***6304E2A6';
-
 
     useEffect(() => {
         const fetchData = async () => {
@@ -122,8 +121,11 @@ const PublicCatalog: React.FC = () => {
         setTimeout(() => setCheckoutStep('info'), 300);
     }
     
+    const pixKey = settings?.paymentInfo?.pixKey;
+    
     const handleCopyToClipboard = () => {
-        navigator.clipboard.writeText(pixCopyPasteCode).then(() => {
+        if(!pixKey) return;
+        navigator.clipboard.writeText(pixKey).then(() => {
             setCopySuccess(true);
             setTimeout(() => setCopySuccess(false), 2000);
         });
@@ -154,21 +156,33 @@ const PublicCatalog: React.FC = () => {
                 return (
                     <div>
                         <h2 className="text-2xl font-bold text-slate-800 mb-2">Pague com Pix para Confirmar</h2>
-                        <p className="text-slate-500 mb-4">Aponte a câmera do seu celular ou use o código abaixo.</p>
-                        <div className="flex justify-center my-6">
-                            <img src="https://storage.googleapis.com/support-kms-prod/ZJ63yv7f6zY2X3aYyifGmLzWHbUcvSp3V2V8" alt="QR Code PIX" className="w-48 h-48 rounded-lg"/>
-                        </div>
-                        <div className="relative mb-4">
-                            <input type="text" readOnly value={pixCopyPasteCode} className="w-full p-2 pr-10 border border-slate-300 rounded-lg bg-slate-100 text-xs"/>
-                             <button onClick={handleCopyToClipboard} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-indigo-600">
-                                <Copy className="w-5 h-5"/>
-                            </button>
-                        </div>
-                         {copySuccess && <p className="text-green-600 text-center text-sm mb-4">Código copiado!</p>}
-                         <button onClick={handleBooking} disabled={isSubmitting} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 disabled:bg-slate-400">
-                            {isSubmitting ? 'Confirmando...' : 'Já Fiz o Pagamento'}
-                         </button>
-                         <button onClick={() => setCheckoutStep('info')} className="w-full text-center text-sm text-slate-500 mt-3 hover:text-indigo-600">Voltar</button>
+                        <p className="text-slate-500 mb-4">Utilize a chave PIX (Copia e Cola) no aplicativo do seu banco.</p>
+                        
+                        {pixKey ? (
+                            <>
+                                <div className="my-6 p-4 bg-slate-100 rounded-lg text-center">
+                                    <Banknote className="w-12 h-12 text-indigo-500 mx-auto mb-2"/>
+                                    <p className="text-sm font-semibold">Use a chave abaixo:</p>
+                                </div>
+                                <div className="relative mb-4">
+                                    <input type="text" readOnly value={pixKey} className="w-full p-2 pr-10 border border-slate-300 rounded-lg bg-slate-100 text-sm"/>
+                                     <button onClick={handleCopyToClipboard} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-indigo-600">
+                                        <Copy className="w-5 h-5"/>
+                                    </button>
+                                </div>
+                                {copySuccess && <p className="text-green-600 text-center text-sm mb-4">Chave PIX copiada!</p>}
+                                <button onClick={handleBooking} disabled={isSubmitting} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 disabled:bg-slate-400">
+                                    {isSubmitting ? 'Confirmando...' : 'Já Fiz o Pagamento'}
+                                </button>
+                            </>
+                        ) : (
+                            <div className="my-6 p-4 bg-red-50 text-red-700 rounded-lg text-center">
+                                <h3 className="font-bold">Pagamento Indisponível</h3>
+                                <p className="text-sm mt-2">As informações de pagamento não foram configuradas. Por favor, entre em contato com a loja para finalizar sua reserva.</p>
+                            </div>
+                        )}
+                         
+                        <button onClick={() => setCheckoutStep('info')} className="w-full text-center text-sm text-slate-500 mt-3 hover:text-indigo-600">Voltar</button>
                     </div>
                 );
             case 'info':

@@ -15,29 +15,92 @@ const timestampToIsoDate = (timestamp: any): string => {
     return timestamp;
 };
 
-const convertDocToInventoryItem = (doc: any): InventoryItem => ({
-    ...doc.data(),
-    id: doc.id,
-    purchaseCost: doc.data().purchaseCost || 0,
-});
+const convertDocToInventoryItem = (doc: any): InventoryItem => {
+    const data = doc.data();
+    return {
+        id: doc.id,
+        name: data.name || '',
+        category: data.category || '',
+        quantity: data.quantity || 0,
+        price: data.price || 0,
+        imageUrl: data.imageUrl || '',
+        status: data.status || 'available',
+        lowStockThreshold: data.lowStockThreshold,
+        maintenanceNotes: data.maintenanceNotes,
+        purchaseCost: data.purchaseCost || 0,
+    };
+};
 
-const convertDocToRental = (doc: any): Rental => ({
-    ...doc.data(),
-    id: doc.id,
-    eventDate: timestampToIsoDate(doc.data().eventDate),
-    pickupDate: timestampToIsoDate(doc.data().pickupDate),
-    returnDate: timestampToIsoDate(doc.data().returnDate),
-    paymentHistory: doc.data().paymentHistory?.map((p: any) => ({ ...p, date: timestampToIsoDate(p.date) })) || [],
-    pickupChecklist: doc.data().pickupChecklist || {},
-    returnChecklist: doc.data().returnChecklist || {},
-});
+const convertDocToRental = (doc: any): Rental => {
+    const data = doc.data() || {};
+    return {
+        id: doc.id,
+        client: {
+            id: data.client?.id || '',
+            name: data.client?.name || '',
+        },
+        eventDate: timestampToIsoDate(data.eventDate),
+        pickupDate: timestampToIsoDate(data.pickupDate),
+        returnDate: timestampToIsoDate(data.returnDate),
+        totalValue: data.totalValue || 0,
+        discount: data.discount || 0,
+        notes: data.notes || '',
+        paymentStatus: data.paymentStatus || 'pending',
+        paymentHistory: Array.isArray(data.paymentHistory) ? data.paymentHistory.map((p: any) => ({
+            id: p.id || '',
+            date: timestampToIsoDate(p.date),
+            amount: p.amount || 0,
+            method: p.method || 'other',
+        })) : [],
+        status: data.status || 'booked',
+        items: Array.isArray(data.items) ? data.items.map((i: any) => ({
+            id: i.id || '',
+            name: i.name || '',
+            quantity: i.quantity || 0,
+            price: i.price || 0
+        })) : [],
+        kits: Array.isArray(data.kits) ? data.kits.map((k: any) => ({
+            id: k.id || '',
+            name: k.name || '',
+            price: k.price || 0,
+            items: Array.isArray(k.items) ? k.items.map((i: any) => ({ id: i.id || '', name: i.name || '' })) : [],
+        })) : [],
+        pickupChecklist: data.pickupChecklist || {},
+        returnChecklist: data.returnChecklist || {},
+        deliveryService: data.deliveryService || false,
+        deliveryFee: data.deliveryFee || 0,
+        setupService: data.setupService || false,
+        setupFee: data.setupFee || 0,
+        deliveryAddress: data.deliveryAddress || '',
+    };
+};
 
-const convertDocToClient = (doc: any): Client => ({
-    ...doc.data(),
-    id: doc.id,
-    type: doc.data().type || 'pf', // Default to 'pf' for old clients
-    address: doc.data().address || { cep: '', street: '', number: '', neighborhood: '', city: '', state: '' }, // Default address
-});
+const convertDocToClient = (doc: any): Client => {
+    const data = doc.data() || {};
+    return {
+        id: doc.id,
+        type: data.type || 'pf',
+        name: data.name || '',
+        cpf: data.cpf || '',
+        birthDate: data.birthDate ? timestampToIsoDate(data.birthDate) : undefined,
+        cnpj: data.cnpj || '',
+        legalName: data.legalName || '',
+        contactName: data.contactName || '',
+        phone: data.phone || '',
+        email: data.email || '',
+        address: {
+            cep: data.address?.cep || '',
+            street: data.address?.street || '',
+            number: data.address?.number || '',
+            complement: data.address?.complement || '',
+            neighborhood: data.address?.neighborhood || '',
+            city: data.address?.city || '',
+            state: data.address?.state || '',
+        },
+        howFound: data.howFound || '',
+        notes: data.notes || '',
+    };
+};
 
 
 // Inventory Management
@@ -84,7 +147,19 @@ export const findOrCreateClient = async (clientData: { name: string; phone: stri
 export const getKits = async (): Promise<Kit[]> => {
     if (!db) return [];
     const snapshot = await getDocs(collection(db, 'kits'));
-    return snapshot.docs.map(doc => ({ ...doc.data() as Omit<Kit, 'id'>, id: doc.id }));
+    return snapshot.docs.map(doc => {
+        const data = doc.data() || {};
+        return {
+            id: doc.id,
+            name: data.name || '',
+            price: data.price || 0,
+            itemIds: Array.isArray(data.itemIds) ? data.itemIds : [],
+            items: Array.isArray(data.items) ? data.items.map((i: any) => ({
+                id: i.id || '',
+                name: i.name || '',
+            })) : [],
+        };
+    });
 };
 export const addKit = (kit: Omit<Kit, 'id'>) => db && addDoc(collection(db, 'kits'), kit);
 export const updateKit = (id: string, data: Partial<Kit>) => db && updateDoc(doc(db, 'kits', id), data);
@@ -106,11 +181,17 @@ export const updateRental = (id: string, data: Partial<Rental>) => db && updateD
 export const getExpenses = async (): Promise<Expense[]> => {
     if (!db) return [];
     const snapshot = await getDocs(collection(db, 'expenses'));
-    return snapshot.docs.map(doc => ({
-        ...doc.data() as Omit<Expense, 'id'>,
-        id: doc.id,
-        date: timestampToIsoDate(doc.data().date),
-    }));
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            description: data.description,
+            category: data.category,
+            date: timestampToIsoDate(data.date),
+            amount: data.amount,
+            paymentMethod: data.paymentMethod,
+        };
+    });
 };
 export const addExpense = (expense: Omit<Expense, 'id'>) => db && addDoc(collection(db, 'expenses'), expense);
 
@@ -118,11 +199,17 @@ export const addExpense = (expense: Omit<Expense, 'id'>) => db && addDoc(collect
 export const getRevenues = async (): Promise<Revenue[]> => {
     if (!db) return [];
     const snapshot = await getDocs(collection(db, 'revenues'));
-    return snapshot.docs.map(doc => ({
-        ...doc.data() as Omit<Revenue, 'id'>,
-        id: doc.id,
-        date: timestampToIsoDate(doc.data().date),
-    }));
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            description: data.description,
+            category: data.category,
+            date: timestampToIsoDate(data.date),
+            amount: data.amount,
+            paymentMethod: data.paymentMethod,
+        };
+    });
 };
 export const addRevenue = (revenue: Omit<Revenue, 'id'>) => db && addDoc(collection(db, 'revenues'), revenue);
 
@@ -182,7 +269,21 @@ export const getCompanySettings = async (): Promise<CompanySettings | null> => {
     const docRef = doc(db, 'settings', 'company');
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-        return { ...docSnap.data() as Omit<CompanySettings, 'id'>, id: 'company' };
+        const data = docSnap.data() || {};
+        return {
+            id: 'company',
+            companyName: data.companyName || '',
+            cnpj: data.cnpj || '',
+            address: data.address || '',
+            logoUrl: data.logoUrl || '',
+            paymentInfo: {
+                pixKey: data.paymentInfo?.pixKey || '',
+                bankName: data.paymentInfo?.bankName || '',
+                agency: data.paymentInfo?.agency || '',
+                account: data.paymentInfo?.account || '',
+            },
+            contractTerms: data.contractTerms || '',
+        };
     }
     return null;
 };

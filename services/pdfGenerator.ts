@@ -1,3 +1,4 @@
+
 import { Rental, Kit, InventoryItem, CompanySettings } from '../types';
 
 declare const jspdf: any;
@@ -46,12 +47,16 @@ export const generateRentalContract = (rental: Rental, settings: CompanySettings
     // Tabela de Itens
     const tableColumn = ["Item", "Qtd.", "Valor"];
     const tableRows: any[] = [];
-    const itemIdsInKits = new Set<string>();
+    
+    // Map to track quantities of items included in kits
+    const kitItemQuantities = new Map<string, number>();
 
     if (rental.kits && rental.kits.length > 0) {
         tableRows.push([{ content: 'KITS TEMÁTICOS', colSpan: 3, styles: { fontStyle: 'bold', fillColor: '#f1f5f9' } }]);
         rental.kits.forEach(kit => {
-            kit.items.forEach(item => itemIdsInKits.add(item.id));
+            kit.items.forEach(item => {
+                kitItemQuantities.set(item.id, (kitItemQuantities.get(item.id) || 0) + 1);
+            });
             tableRows.push([
                 `${kit.name}\n${kit.items.map(i => `- ${i.name}`).join('\n')}`,
                 '1', 
@@ -59,11 +64,18 @@ export const generateRentalContract = (rental: Rental, settings: CompanySettings
             ]);
         });
     }
+    
+    // Determine individual items by subtracting kit items from the total rental items
+    const individualItems: Pick<InventoryItem, 'id' | 'name' | 'quantity' | 'price'>[] = [];
+    rental.items.forEach(item => {
+        const quantityInKits = kitItemQuantities.get(item.id) || 0;
+        const individualQuantity = item.quantity - quantityInKits;
 
-    const individualItems = rental.items.filter(item => {
-        const itemInKit = rental.kits?.some(kit => kit.items.some(kItem => kItem.id === item.id)) ?? false;
-        return !itemInKit;
+        if (individualQuantity > 0) {
+            individualItems.push({ ...item, quantity: individualQuantity });
+        }
     });
+
 
     if (individualItems.length > 0) {
         tableRows.push([{ content: 'ITENS INDIVIDUAIS', colSpan: 3, styles: { fontStyle: 'bold', fillColor: '#f1f5f9' } }]);
@@ -126,12 +138,16 @@ export const generateRentalContract = (rental: Rental, settings: CompanySettings
     doc.setFont('helvetica', 'bold');
     doc.text('CLÁUSULAS IMPORTANTES:', 20, finalY + 25);
     doc.setFont('helvetica', 'normal');
-    const clauses = [
+    
+    const defaultClauses = [
         '1. O LOCATÁRIO se responsabiliza pela integridade dos itens durante o período da locação.',
         '2. Qualquer dano, perda ou avaria dos itens será de responsabilidade do LOCATÁRIO, que deverá arcar com os custos de reparo ou reposição.',
         '3. A devolução dos itens deve ocorrer na data e hora estipuladas. Atrasos podem acarretar multas.',
         '4. A montagem e desmontagem dos itens é de responsabilidade do LOCATÁRIO, a menos que o serviço tenha sido contratado à parte.',
     ];
+    
+    const clauses = settings?.contractTerms ? settings.contractTerms.split('\n') : defaultClauses;
+
     doc.text(clauses, 20, finalY + 32, { maxWidth: 170 });
 
     // Assinaturas
